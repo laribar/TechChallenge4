@@ -83,8 +83,7 @@ for col in expected_columns:
         input_df[col] = 0
 
 input_df = input_df[expected_columns]
-
-input_scaled = scaler.transform(input_df)
+input_scaled = scaler.transform(input_df.values)  # ← versão robusta
 
 # Função explicativa
 def gerar_explicacao():
