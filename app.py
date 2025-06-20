@@ -8,10 +8,13 @@ modelo = joblib.load("modelo_final.pkl")
 scaler = joblib.load("scaler.pkl")
 label_encoder = joblib.load("label_encoder.pkl")
 
+# Lista das colunas esperadas (garantido pelo scaler)
+expected_columns = list(scaler.feature_names_in_)
+
 st.title("🔍 Preditor Personalizado de Obesidade")
 st.write("Responda às perguntas abaixo para prever seu nível de obesidade com base em hábitos, alimentação e saúde.")
 
-# Perguntas originais
+# Perguntas do questionário
 genero = st.selectbox("Qual seu gênero?", ["Feminino", "Masculino"])
 idade = st.slider("Qual sua idade?", 10, 100, 25)
 altura = st.slider("Qual sua altura (em metros)?", 1.0, 2.5, 1.70)
@@ -26,61 +29,55 @@ controla_calorias = st.radio("Você controla a ingestão calórica?", ["Sim", "N
 atividade_fisica = st.slider("Horas de atividade física por semana:", 0.0, 5.0, 1.0)
 tempo_tela = st.slider("Horas de uso de telas por dia (celular, TV, computador)", 0.0, 5.0, 2.0)
 transporte = st.selectbox("Meio de transporte mais utilizado:", ["Transporte público", "A pé", "Carro", "Moto", "Bicicleta"])
-
-# 🔹 Novas perguntas clínicas
 diabetes = st.radio("Você já foi diagnosticado(a) com diabetes?", ["Sim", "Não"])
 pressao = st.radio("Você tem pressão alta diagnosticada?", ["Sim", "Não"])
 depressao = st.radio("Você tem sentido pouco interesse ou prazer nas coisas ultimamente?", ["Sim", "Não"])
 alcool = st.selectbox("Com que frequência você consome bebida alcoólica?", ["Não", "Às vezes", "Frequentemente", "Sempre"])
 fuma = st.radio("Você fuma atualmente?", ["Sim", "Não"])
 
-# Montar DataFrame com as features
-input_data = pd.DataFrame({
-    "Age": [idade],
-    "Height": [altura],
-    "Weight": [peso],
-    "FCVC": [vegetais],
-    "NCP": [refeicoes_dia],
-    "CH2O": [agua],
-    "FAF": [atividade_fisica],
-    "TUE": [tempo_tela],
-    "Gender_Female": [1 if genero == "Feminino" else 0],
-    "Gender_Male": [1 if genero == "Masculino" else 0],
-    "family_history_yes": [1 if historico_familiar == "Sim" else 0],
-    "family_history_no": [1 if historico_familiar == "Não" else 0],
-    "FAVC_yes": [1 if alimentos_caloricos == "Sim" else 0],
-    "FAVC_no": [1 if alimentos_caloricos == "Não" else 0],
-    "CAEC_no": [1 if lanches == "Não" else 0],
-    "CAEC_Sometimes": [1 if lanches == "Às vezes" else 0],
-    "CAEC_Frequently": [1 if lanches == "Frequentemente" else 0],
-    "CAEC_Always": [1 if lanches == "Sempre" else 0],
-    "SCC_yes": [1 if controla_calorias == "Sim" else 0],
-    "SCC_no": [1 if controla_calorias == "Não" else 0],
-    "MTRANS_Public_Transportation": [1 if transporte == "Transporte público" else 0],
-    "MTRANS_Walking": [1 if transporte == "A pé" else 0],
-    "MTRANS_Automobile": [1 if transporte == "Carro" else 0],
-    "MTRANS_Motorbike": [1 if transporte == "Moto" else 0],
-    "MTRANS_Bike": [1 if transporte == "Bicicleta" else 0],
-    # Novas variáveis clínicas:
-    "DIQ010": [1.0 if diabetes == "Sim" else 0.0],
-    "MCQ160K": [1.0 if pressao == "Sim" else 0.0],
-    "DPQ010": [1.0 if depressao == "Sim" else 0.0],
-    "ALQ130": [0 if alcool == "Não" else 1 if alcool == "Às vezes" else 2 if alcool == "Frequentemente" else 3],
-    "SMQ020": [1.0 if fuma == "Sim" else 0.0]
-})
+# Montar dicionário de entrada
+input_dict = {
+    "Age": idade,
+    "Height": altura,
+    "Weight": peso,
+    "FCVC": vegetais,
+    "NCP": refeicoes_dia,
+    "CH2O": agua,
+    "FAF": atividade_fisica,
+    "TUE": tempo_tela,
+    "Gender_Female": 1 if genero == "Feminino" else 0,
+    "Gender_Male": 1 if genero == "Masculino" else 0,
+    "family_history_yes": 1 if historico_familiar == "Sim" else 0,
+    "family_history_no": 1 if historico_familiar == "Não" else 0,
+    "FAVC_yes": 1 if alimentos_caloricos == "Sim" else 0,
+    "FAVC_no": 1 if alimentos_caloricos == "Não" else 0,
+    "CAEC_no": 1 if lanches == "Não" else 0,
+    "CAEC_Sometimes": 1 if lanches == "Às vezes" else 0,
+    "CAEC_Frequently": 1 if lanches == "Frequentemente" else 0,
+    "CAEC_Always": 1 if lanches == "Sempre" else 0,
+    "SCC_yes": 1 if controla_calorias == "Sim" else 0,
+    "SCC_no": 1 if controla_calorias == "Não" else 0,
+    "MTRANS_Public_Transportation": 1 if transporte == "Transporte público" else 0,
+    "MTRANS_Walking": 1 if transporte == "A pé" else 0,
+    "MTRANS_Automobile": 1 if transporte == "Carro" else 0,
+    "MTRANS_Motorbike": 1 if transporte == "Moto" else 0,
+    "MTRANS_Bike": 1 if transporte == "Bicicleta" else 0,
+    "DIQ010": 1.0 if diabetes == "Sim" else 0.0,
+    "MCQ160K": 1.0 if pressao == "Sim" else 0.0,
+    "DPQ010": 1.0 if depressao == "Sim" else 0.0,
+    "ALQ130": 0 if alcool == "Não" else 1 if alcool == "Às vezes" else 2 if alcool == "Frequentemente" else 3,
+    "SMQ020": 1.0 if fuma == "Sim" else 0.0
+}
 
-# Organizar colunas e aplicar escalonamento
-# Garantir que todas as colunas do scaler estejam no input_data
-for col in scaler.feature_names_in_:
-    if col not in input_data.columns:
-        input_data[col] = 0  # preenche com 0 se a coluna estiver faltando
+# Garantir que todas as colunas existam e estejam na ordem certa
+for col in expected_columns:
+    if col not in input_dict:
+        input_dict[col] = 0
 
-# Reorganiza na ordem correta
-input_data = input_data[scaler.feature_names_in_]
-input_scaled = scaler.transform(input_data)
+input_df = pd.DataFrame([input_dict])[expected_columns]
+input_scaled = scaler.transform(input_df)
 
-
-# Gerar explicações básicas
+# Função explicativa
 def gerar_explicacao():
     riscos = []
     if vegetais < 1.0:
