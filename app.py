@@ -1,21 +1,17 @@
-# Este é o app Streamlit que carrega o modelo de previsão de obesidade.
-# Ele permite que o usuário responda perguntas sobre estilo de vida e saúde,
-# e exibe uma previsão personalizada com base nos dados inseridos.
-
 import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
 
-# Carregar o modelo, scaler e label encoder
+# Carregar modelo, scaler e label encoder
 modelo = joblib.load("modelo_final.pkl")
 scaler = joblib.load("scaler.pkl")
 label_encoder = joblib.load("label_encoder.pkl")
 
 st.title("🔍 Preditor Personalizado de Obesidade")
-st.write("Responda às perguntas abaixo para receber uma previsão personalizada do seu nível de obesidade.")
+st.write("Responda às perguntas abaixo para prever seu nível de obesidade com base em hábitos, alimentação e saúde.")
 
-# Entradas do usuário
+# Perguntas originais
 genero = st.selectbox("Qual seu gênero?", ["Feminino", "Masculino"])
 idade = st.slider("Qual sua idade?", 10, 100, 25)
 altura = st.slider("Qual sua altura (em metros)?", 1.0, 2.5, 1.70)
@@ -25,16 +21,20 @@ alimentos_caloricos = st.radio("Você consome alimentos calóricos com frequênc
 vegetais = st.slider("Com que frequência consome vegetais nas refeições? (0 = nunca, 3 = sempre)", 0.0, 3.0, 2.0)
 refeicoes_dia = st.slider("Quantas refeições principais faz por dia?", 1.0, 5.0, 3.0)
 lanches = st.selectbox("Você costuma comer entre as refeições?", ["Não", "Às vezes", "Frequentemente", "Sempre"])
-fuma = st.radio("Você fuma?", ["Sim", "Não"])
 agua = st.slider("Quantos litros de água você bebe por dia?", 0.0, 3.0, 2.0)
 controla_calorias = st.radio("Você controla a ingestão calórica?", ["Sim", "Não"])
 atividade_fisica = st.slider("Horas de atividade física por semana:", 0.0, 5.0, 1.0)
 tempo_tela = st.slider("Horas de uso de telas por dia (celular, TV, computador)", 0.0, 5.0, 2.0)
-alcool = st.selectbox("Frequência de consumo de bebidas alcoólicas:", ["Não", "Às vezes", "Frequentemente", "Sempre"])
-transporte = st.selectbox("Meio de transporte mais utilizado:", 
-                          ["Transporte público", "A pé", "Carro", "Moto", "Bicicleta"])
+transporte = st.selectbox("Meio de transporte mais utilizado:", ["Transporte público", "A pé", "Carro", "Moto", "Bicicleta"])
 
-# Montar DataFrame com as features para previsão
+# 🔹 Novas perguntas clínicas
+diabetes = st.radio("Você já foi diagnosticado(a) com diabetes?", ["Sim", "Não"])
+pressao = st.radio("Você tem pressão alta diagnosticada?", ["Sim", "Não"])
+depressao = st.radio("Você tem sentido pouco interesse ou prazer nas coisas ultimamente?", ["Sim", "Não"])
+alcool = st.selectbox("Com que frequência você consome bebida alcoólica?", ["Não", "Às vezes", "Frequentemente", "Sempre"])
+fuma = st.radio("Você fuma atualmente?", ["Sim", "Não"])
+
+# Montar DataFrame com as features
 input_data = pd.DataFrame({
     "Age": [idade],
     "Height": [altura],
@@ -54,57 +54,57 @@ input_data = pd.DataFrame({
     "CAEC_Sometimes": [1 if lanches == "Às vezes" else 0],
     "CAEC_Frequently": [1 if lanches == "Frequentemente" else 0],
     "CAEC_Always": [1 if lanches == "Sempre" else 0],
-    "SMOKE_yes": [1 if fuma == "Sim" else 0],
-    "SMOKE_no": [1 if fuma == "Não" else 0],
     "SCC_yes": [1 if controla_calorias == "Sim" else 0],
     "SCC_no": [1 if controla_calorias == "Não" else 0],
-    "CALC_no": [1 if alcool == "Não" else 0],
-    "CALC_Sometimes": [1 if alcool == "Às vezes" else 0],
-    "CALC_Frequently": [1 if alcool == "Frequentemente" else 0],
-    "CALC_Always": [1 if alcool == "Sempre" else 0],
     "MTRANS_Public_Transportation": [1 if transporte == "Transporte público" else 0],
     "MTRANS_Walking": [1 if transporte == "A pé" else 0],
     "MTRANS_Automobile": [1 if transporte == "Carro" else 0],
     "MTRANS_Motorbike": [1 if transporte == "Moto" else 0],
-    "MTRANS_Bike": [1 if transporte == "Bicicleta" else 0]
+    "MTRANS_Bike": [1 if transporte == "Bicicleta" else 0],
+    # Novas variáveis clínicas:
+    "DIQ010": [1.0 if diabetes == "Sim" else 0.0],
+    "MCQ160K": [1.0 if pressao == "Sim" else 0.0],
+    "DPQ010": [1.0 if depressao == "Sim" else 0.0],
+    "ALQ130": [0 if alcool == "Não" else 1 if alcool == "Às vezes" else 2 if alcool == "Frequentemente" else 3],
+    "SMQ020": [1.0 if fuma == "Sim" else 0.0]
 })
 
-# Garantir ordem correta das colunas
+# Organizar colunas e aplicar escalonamento
 input_data = input_data[scaler.feature_names_in_]
 input_scaled = scaler.transform(input_data)
 
-# Explicação textual dos fatores
+# Gerar explicações básicas
 def gerar_explicacao():
-    explicacao = []
-
+    riscos = []
     if vegetais < 1.0:
-        explicacao.append("- Baixo consumo de vegetais")
+        riscos.append("- Baixo consumo de vegetais")
     if alimentos_caloricos == "Sim":
-        explicacao.append("- Consumo frequente de alimentos calóricos")
+        riscos.append("- Consumo frequente de alimentos calóricos")
     if historico_familiar == "Sim":
-        explicacao.append("- Histórico familiar de obesidade")
+        riscos.append("- Histórico familiar de obesidade")
     if atividade_fisica < 1.0:
-        explicacao.append("- Baixo nível de atividade física")
-    if fuma == "Sim":
-        explicacao.append("- Fuma atualmente")
+        riscos.append("- Nível de atividade física muito baixo")
     if alcool in ["Frequentemente", "Sempre"]:
-        explicacao.append("- Consumo elevado de bebidas alcoólicas")
-    if controla_calorias == "Não":
-        explicacao.append("- Não controla a ingestão calórica")
-    if tempo_tela > 3:
-        explicacao.append("- Alto tempo de exposição a telas")
+        riscos.append("- Consumo elevado de bebidas alcoólicas")
+    if fuma == "Sim":
+        riscos.append("- Você fuma atualmente")
+    if depressao == "Sim":
+        riscos.append("- Indício de desmotivação/depressão")
+    if diabetes == "Sim":
+        riscos.append("- Diabetes diagnosticado")
+    if pressao == "Sim":
+        riscos.append("- Pressão alta diagnosticada")
 
-    return "Nenhum fator de risco evidente." if not explicacao else "\n".join(explicacao)
+    return "Nenhum fator de risco relevante identificado." if not riscos else "\n".join(riscos)
 
 # Botão de previsão
-if st.button("🔎 Prever nível de obesidade"):
-    predicao = modelo.predict(input_scaled)
-    resultado = label_encoder.inverse_transform(predicao)[0]
+if st.button("🔍 Prever nível de obesidade"):
+    pred = modelo.predict(input_scaled)
+    resultado = label_encoder.inverse_transform(pred)[0]
 
     st.success(f"✅ Resultado previsto: **{resultado.replace('_', ' ')}**")
 
-    explicacao = gerar_explicacao()
-    st.markdown("#### 🧠 Fatores que podem estar influenciando seu resultado:")
-    st.markdown(f"```\n{explicacao}\n```")
+    st.markdown("#### 🧠 Fatores de risco detectados:")
+    st.markdown(f"```\n{gerar_explicacao()}\n```")
 
     st.button("🔁 Fazer nova previsão", on_click=lambda: st.experimental_rerun())
