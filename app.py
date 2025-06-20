@@ -9,7 +9,8 @@ scaler = joblib.load("scaler.pkl")
 label_encoder = joblib.load("label_encoder.pkl")
 
 # Lista das colunas esperadas (garantido pelo scaler)
-expected_columns = list(scaler.feature_names_in_)
+expected_columns = modelo.feature_names_in_
+
 
 st.title("🔍 Preditor Personalizado de Obesidade")
 st.write("Responda às perguntas abaixo para prever seu nível de obesidade com base em hábitos, alimentação e saúde.")
@@ -74,7 +75,15 @@ for col in expected_columns:
     if col not in input_dict:
         input_dict[col] = 0
 
-input_df = pd.DataFrame([input_dict])[expected_columns]
+# Criar DataFrame com todas as colunas esperadas, preenchendo as ausentes com 0
+input_df = pd.DataFrame([input_dict])
+
+for col in expected_columns:
+    if col not in input_df.columns:
+        input_df[col] = 0
+
+input_df = input_df[expected_columns]
+
 input_scaled = scaler.transform(input_df)
 
 # Função explicativa
