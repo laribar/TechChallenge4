@@ -9,7 +9,9 @@ scaler = joblib.load("scaler.pkl")
 label_encoder = joblib.load("label_encoder.pkl")
 
 # Lista das colunas esperadas (garantido pelo scaler)
-expected_columns = modelo.feature_names_in_
+# Verifica se o modelo tem os nomes das colunas esperadas
+expected_columns = getattr(modelo, "feature_names_in_", input_dict.keys())
+
 
 
 st.title("🔍 Preditor Personalizado de Obesidade")
@@ -74,7 +76,12 @@ input_dict = {
 input_df = pd.DataFrame([input_dict])
 
 # Garante que todas as colunas existam e na ordem certa
-input_df = input_df.reindex(columns=expected_columns, fill_value=0)
+if expected_columns:
+    input_df = input_df.reindex(columns=expected_columns, fill_value=0)
+else:
+    st.error("⚠️ As colunas do modelo não foram encontradas. Verifique se ele foi treinado corretamente.")
+    st.stop()
+
 
 # Escalonar
 input_scaled = scaler.transform(input_df.values)
