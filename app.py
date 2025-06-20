@@ -104,4 +104,5 @@ if st.button("🔍 Prever nível de obesidade"):
     st.success(f"✅ Resultado previsto: **{resultado.replace('_', ' ')}**")
     st.markdown("#### 🧠 Fatores de risco detectados:")
     st.markdown(f"```\n{gerar_explicacao()}\n```")
-    st.button("🔁 Fazer nova previsão", on_click=lambda: st.experimental_rerun())
+    st.button("🔁 Fazer nova previsão", on_click=st.rerun)
+
