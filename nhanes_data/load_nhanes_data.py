@@ -4,20 +4,21 @@ from functools import reduce
 
 def load_nhanes_data(path="nhanes_data"):
     """Carrega e combina arquivos NHANES por SEQN."""
-    files = [
-        "DEMO_L.XPT",
-        "BMX_L.XPT",
-        "DR1TOT_L.XPT",
-        "DIQ_L.XPT",
-        "MCQ_L.XPT",
-        "DPQ_L.XPT",
-        "PAQ_L.XPT",
-        "SLQ_L.XPT",
-        "SMQ_L.XPT",
-        "DBQ_L.XPT",
-        "ALQ_L.XPT",
-        "WHQ_L.XPT",
-        "OCQ_L.XPT"
+
+   files = [
+    "DEMO_L.xpt",
+    "BMX_L.xpt",
+    "DR1TOT_L.xpt",
+    "DIQ_L.xpt",
+    "MCQ_L.xpt",
+    "DPQ_L.xpt",
+    "PAQ_L.xpt",
+    "SLQ_L.xpt",
+    "SMQ_L.xpt",
+    "DBQ_L.xpt",
+    "ALQ_L.xpt",
+    "WHQ_L.xpt",
+    "OCQ_L.xpt"
     ]
 
     dfs = []
