@@ -70,20 +70,15 @@ input_dict = {
     "SMQ020": 1.0 if fuma == "Sim" else 0.0
 }
 
-# Garantir que todas as colunas existam e estejam na ordem certa
-for col in expected_columns:
-    if col not in input_dict:
-        input_dict[col] = 0
-
-# Criar DataFrame com todas as colunas esperadas, preenchendo as ausentes com 0
+# Cria DataFrame e força alinhamento exato com as colunas esperadas
 input_df = pd.DataFrame([input_dict])
 
-for col in expected_columns:
-    if col not in input_df.columns:
-        input_df[col] = 0
+# Garante que todas as colunas existam e na ordem certa
+input_df = input_df.reindex(columns=expected_columns, fill_value=0)
 
-input_df = input_df[expected_columns]
-input_scaled = scaler.transform(input_df.values)  # ← versão robusta
+# Escalonar
+input_scaled = scaler.transform(input_df)
+
 
 # Função explicativa
 def gerar_explicacao():
