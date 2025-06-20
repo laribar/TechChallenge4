@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
+from PIL import Image, ImageDraw
+import os
 
 # ---------- ESTILO VISUAL ----------
 st.set_page_config(page_title="Preditor de Obesidade", layout="centered")
@@ -138,15 +140,46 @@ explicacoes_obesidade = {
     "Obesity_Type_III": "Obesidade grau III (mórbida). Risco grave de comorbidades. Requer acompanhamento médico urgente."
 }
 
+def gerar_imagem_diagnostico(categoria):
+    img_path = "categorias_obesidade.png"  # Substitua pelo nome real do seu arquivo salvo
+    if not os.path.exists(img_path):
+        return None
+
+    img = Image.open(img_path).copy()
+    draw = ImageDraw.Draw(img)
+
+    # Coordenadas centrais (ajuste conforme sua imagem original)
+    categorias_coord = {
+        "Insufficient_Weight": (90, 230),
+        "Normal_Weight": (230, 230),
+        "Overweight_Level_I": (370, 230),
+        "Obesity_Type_I": (510, 230),
+        "Obesity_Type_II": (650, 230),
+        "Obesity_Type_III": (790, 230)
+    }
+
+    if categoria not in categorias_coord:
+        return img
+
+    x, y = categorias_coord[categoria]
+    r = 80
+    draw.ellipse((x - r, y - r, x + r, y + r), outline="red", width=6)
+    return img
+
 if st.session_state.resultado_exibido:
     categoria = st.session_state.resultado
     descricao = explicacoes_obesidade.get(categoria, "Categoria não reconhecida.")
-    
+
     st.success(f"✅ Resultado previsto: **{categoria.replace('_', ' ')}**")
     st.markdown(f"🩺 **Descrição clínica:**\n> {descricao}")
-    
+
+    imagem_destaque = gerar_imagem_diagnostico(categoria)
+    if imagem_destaque:
+        st.image(imagem_destaque, caption="🔎 Localização corporal correspondente", use_column_width=True)
+
     st.markdown("#### 🧠 Fatores de risco identificados:")
     st.code(gerar_explicacao())
-    
+
     st.button("🔁 Fazer nova previsão", on_click=lambda: st.session_state.update({"resultado_exibido": False}))
+
 
