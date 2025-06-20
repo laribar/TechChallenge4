@@ -3,6 +3,11 @@ import pandas as pd
 import joblib
 import numpy as np
 
+# Inicializa estado da sessão
+if "resultado_exibido" not in st.session_state:
+    st.session_state.resultado_exibido = False
+    st.session_state.resultado = None
+
 # Carregar modelo, scaler, label encoder e colunas
 modelo = joblib.load("modelo_final.pkl")
 scaler = joblib.load("scaler.pkl")
@@ -70,8 +75,6 @@ input_dict = {
 # Criar DataFrame e alinhar com colunas do treino
 input_df = pd.DataFrame([input_dict])
 input_df = input_df.reindex(columns=feature_columns, fill_value=0)
-
-# Escalonar
 input_scaled = scaler.transform(input_df)
 
 # Função explicativa
@@ -101,8 +104,12 @@ def gerar_explicacao():
 if st.button("🔍 Prever nível de obesidade"):
     pred = modelo.predict(input_scaled)
     resultado = label_encoder.inverse_transform(pred)[0]
-    st.success(f"✅ Resultado previsto: **{resultado.replace('_', ' ')}**")
+    st.session_state.resultado = resultado
+    st.session_state.resultado_exibido = True
+
+# Exibição do resultado se houver
+if st.session_state.resultado_exibido:
+    st.success(f"✅ Resultado previsto: **{st.session_state.resultado.replace('_', ' ')}**")
     st.markdown("#### 🧠 Fatores de risco detectados:")
     st.markdown(f"```\n{gerar_explicacao()}\n```")
-    st.button("🔁 Fazer nova previsão", on_click=st.rerun)
-
+    st.button("🔁 Fazer nova previsão", on_click=lambda: st.session_state.update({"resultado_exibido": False}))
