@@ -175,7 +175,7 @@ if st.session_state.resultado_exibido:
 
     imagem_destaque = gerar_imagem_diagnostico(categoria)
     if imagem_destaque:
-        st.image(imagem_destaque, caption="🔎 Localização corporal correspondente", use_column_width=True)
+        st.image(imagem_destaque, caption="🔎 Localização corporal correspondente", use_container_width=True)
 
     st.markdown("#### 🧠 Fatores de risco identificados:")
     st.code(gerar_explicacao())
