@@ -77,7 +77,8 @@ input_df = pd.DataFrame([input_dict])
 input_df = input_df.reindex(columns=expected_columns, fill_value=0)
 
 # Escalonar
-input_scaled = scaler.transform(input_df)
+input_scaled = scaler.transform(input_df.values)
+
 
 
 # Função explicativa
@@ -106,6 +107,7 @@ def gerar_explicacao():
 
 # Botão de previsão
 if st.button("🔍 Prever nível de obesidade"):
+    # Previsão
     pred = modelo.predict(input_scaled)
     resultado = label_encoder.inverse_transform(pred)[0]
 
