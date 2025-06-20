@@ -20,19 +20,18 @@ def load_nhanes_data(path="nhanes_data"):
         "OCQ_L.XPT"
     ]
 
-dfs = []
-for file in files:
-    file_path = os.path.join(path, file)
-    print(f"📥 Carregando {file_path}...")
+    dfs = []
+    for file in files:
+        file_path = os.path.join(path, file)
+        print(f"📥 Carregando {file_path}...")
 
-    df_temp = pd.read_sas(file_path)
-    print(f"➡️  {file} tem {df_temp.shape[0]} linhas e {df_temp.shape[1]} colunas.")
+        df_temp = pd.read_sas(file_path)
+        print(f"➡️  {file} tem {df_temp.shape[0]} linhas e {df_temp.shape[1]} colunas.")
 
-    dfs.append(df_temp)
+        dfs.append(df_temp)
 
-# Tente merge mais seguro (left)
-df_final = reduce(lambda left, right: pd.merge(left, right, on='SEQN', how='left'), dfs)
+    # Tente merge mais seguro (left)
+    df_final = reduce(lambda left, right: pd.merge(left, right, on='SEQN', how='left'), dfs)
 
-print(f"\n✅ Dados combinados com sucesso: {df_final.shape[0]} linhas, {df_final.shape[1]} colunas.")
-
-
+    print(f"\n✅ Dados combinados com sucesso: {df_final.shape[0]} linhas, {df_final.shape[1]} colunas.")
+    return df_final
