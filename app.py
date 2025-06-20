@@ -34,7 +34,7 @@ alcool = st.selectbox("Com que frequência você consome bebida alcoólica?", ["
 transporte = st.selectbox("Qual meio de transporte você mais utiliza?", 
                           ["Transporte público", "A pé", "Carro", "Moto", "Bicicleta"])
 
-# Conversão para os valores esperados pelo modelo
+# Criar DataFrame com os dados de entrada
 input_data = pd.DataFrame({
     "Age": [idade],
     "Height": [altura],
@@ -68,13 +68,48 @@ input_data = pd.DataFrame({
     "MTRANS_Motorbike": [1 if transporte == "Moto" else 0],
     "MTRANS_Bike": [1 if transporte == "Bicicleta" else 0]
 })
+
+# Função para gerar explicação com base nos hábitos
+def gerar_explicacao():
+    explicacao = []
+
+    if vegetais < 1.0:
+        explicacao.append("- Baixo consumo de vegetais")
+    if alimentos_caloricos == "Sim":
+        explicacao.append("- Consumo frequente de alimentos calóricos")
+    if historico_familiar == "Sim":
+        explicacao.append("- Histórico familiar de sobrepeso")
+    if atividade_fisica < 1.0:
+        explicacao.append("- Baixa prática de atividade física")
+    if fuma == "Sim":
+        explicacao.append("- Relatou que fuma")
+    if alcool in ["Frequentemente", "Sempre"]:
+        explicacao.append("- Consumo frequente de bebida alcoólica")
+    if controla_calorias == "Não":
+        explicacao.append("- Não controla a ingestão calórica")
+    if tempo_tela > 3:
+        explicacao.append("- Muito tempo de exposição a telas")
+
+    if not explicacao:
+        return "Nenhum fator de risco relevante informado."
+    else:
+        return "\n".join(explicacao)
+
 # Garantir a ordem e nomes corretos das colunas para o scaler
 input_data = input_data[scaler.feature_names_in_]
 input_scaled = scaler.transform(input_data)
 
-# Fazer a predição
+# Previsão
 if st.button("Prever"):
     predicao = modelo.predict(input_scaled)
     resultado = label_encoder.inverse_transform(predicao)[0]
+
     st.success(f"🔎 Resultado previsto: **{resultado.replace('_', ' ')}**")
 
+    explicacao = gerar_explicacao()
+    st.markdown("#### 📌 Explicação baseada nos seus hábitos:")
+    st.markdown(f"```\n{explicacao}\n```")
+
+# Botão para reiniciar
+if st.button("🔄 Iniciar nova previsão"):
+    st.experimental_rerun()
