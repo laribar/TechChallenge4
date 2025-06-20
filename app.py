@@ -209,3 +209,5 @@ elif menu == "📊 Dados do Modelo":
 ### 🔎 Bibliotecas utilizadas
 - `streamlit`, `pandas`, `numpy`, `scikit-learn`, `joblib`, `Pillow`
 """)
+    st.subheader("🔍 Correlação entre Variáveis")
+    st.image("matriz.png", caption="Matriz de Correlação entre Variáveis Numéricas", use_container_width=True)
