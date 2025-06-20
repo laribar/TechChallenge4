@@ -5,20 +5,20 @@ from functools import reduce
 def load_nhanes_data(path="nhanes_data"):
     """Carrega e combina arquivos NHANES por SEQN."""
 
-   files = [
-    "DEMO_L.xpt",
-    "BMX_L.xpt",
-    "DR1TOT_L.xpt",
-    "DIQ_L.xpt",
-    "MCQ_L.xpt",
-    "DPQ_L.xpt",
-    "PAQ_L.xpt",
-    "SLQ_L.xpt",
-    "SMQ_L.xpt",
-    "DBQ_L.xpt",
-    "ALQ_L.xpt",
-    "WHQ_L.xpt",
-    "OCQ_L.xpt"
+    files = [
+        "DEMO_L.xpt",
+        "BMX_L.xpt",
+        "DR1TOT_L.xpt",
+        "DIQ_L.xpt",
+        "MCQ_L.xpt",
+        "DPQ_L.xpt",
+        "PAQ_L.xpt",
+        "SLQ_L.xpt",
+        "SMQ_L.xpt",
+        "DBQ_L.xpt",
+        "ALQ_L.xpt",
+        "WHQ_L.xpt",
+        "OCQ_L.xpt"
     ]
 
     dfs = []
@@ -31,7 +31,6 @@ def load_nhanes_data(path="nhanes_data"):
 
         dfs.append(df_temp)
 
-    # Tente merge mais seguro (left)
     df_final = reduce(lambda left, right: pd.merge(left, right, on='SEQN', how='left'), dfs)
 
     print(f"\n✅ Dados combinados com sucesso: {df_final.shape[0]} linhas, {df_final.shape[1]} colunas.")
