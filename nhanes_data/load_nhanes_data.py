@@ -7,7 +7,6 @@ def load_nhanes_data(path="nhanes_data"):
 
     files = [
         "DEMO_L.xpt",
-        "BMX_L.xpt",
         "DR1TOT_L.xpt",
         "DIQ_L.xpt",
         "MCQ_L.xpt",
