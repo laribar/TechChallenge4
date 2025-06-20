@@ -3,10 +3,11 @@ import pandas as pd
 import joblib
 import numpy as np
 
-# Carregar modelo, scaler e label encoder
+# Carregar modelo, scaler, label encoder e colunas
 modelo = joblib.load("modelo_final.pkl")
 scaler = joblib.load("scaler.pkl")
 label_encoder = joblib.load("label_encoder.pkl")
+feature_columns = joblib.load("feature_columns.pkl")
 
 st.title("🔍 Preditor Personalizado de Obesidade")
 st.write("Responda às perguntas abaixo para prever seu nível de obesidade com base em hábitos, alimentação e saúde.")
@@ -66,17 +67,12 @@ input_dict = {
     "SMQ020": 1.0 if fuma == "Sim" else 0.0
 }
 
-# Cria DataFrame a partir do dicionário
+# Criar DataFrame e alinhar com colunas do treino
 input_df = pd.DataFrame([input_dict])
-
-# Verifica se o modelo tem os nomes das colunas esperadas
-expected_columns = getattr(modelo, "feature_names_in_", input_df.columns)
-
-# Garante que todas as colunas existam e estejam na ordem certa
-input_df = input_df.reindex(columns=expected_columns, fill_value=0)
+input_df = input_df.reindex(columns=feature_columns, fill_value=0)
 
 # Escalonar
-input_scaled = scaler.transform(input_df.values)
+input_scaled = scaler.transform(input_df)
 
 # Função explicativa
 def gerar_explicacao():
