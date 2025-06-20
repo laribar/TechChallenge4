@@ -8,12 +8,6 @@ modelo = joblib.load("modelo_final.pkl")
 scaler = joblib.load("scaler.pkl")
 label_encoder = joblib.load("label_encoder.pkl")
 
-# Lista das colunas esperadas (garantido pelo scaler)
-# Verifica se o modelo tem os nomes das colunas esperadas
-expected_columns = getattr(modelo, "feature_names_in_", input_dict.keys())
-
-
-
 st.title("🔍 Preditor Personalizado de Obesidade")
 st.write("Responda às perguntas abaixo para prever seu nível de obesidade com base em hábitos, alimentação e saúde.")
 
@@ -72,21 +66,17 @@ input_dict = {
     "SMQ020": 1.0 if fuma == "Sim" else 0.0
 }
 
-# Cria DataFrame e força alinhamento exato com as colunas esperadas
+# Cria DataFrame a partir do dicionário
 input_df = pd.DataFrame([input_dict])
 
-# Garante que todas as colunas existam e na ordem certa
-if expected_columns:
-    input_df = input_df.reindex(columns=expected_columns, fill_value=0)
-else:
-    st.error("⚠️ As colunas do modelo não foram encontradas. Verifique se ele foi treinado corretamente.")
-    st.stop()
+# Verifica se o modelo tem os nomes das colunas esperadas
+expected_columns = getattr(modelo, "feature_names_in_", input_df.columns)
 
+# Garante que todas as colunas existam e estejam na ordem certa
+input_df = input_df.reindex(columns=expected_columns, fill_value=0)
 
 # Escalonar
 input_scaled = scaler.transform(input_df.values)
-
-
 
 # Função explicativa
 def gerar_explicacao():
@@ -109,18 +99,13 @@ def gerar_explicacao():
         riscos.append("- Diabetes diagnosticado")
     if pressao == "Sim":
         riscos.append("- Pressão alta diagnosticada")
-
     return "Nenhum fator de risco relevante identificado." if not riscos else "\n".join(riscos)
 
 # Botão de previsão
 if st.button("🔍 Prever nível de obesidade"):
-    # Previsão
     pred = modelo.predict(input_scaled)
     resultado = label_encoder.inverse_transform(pred)[0]
-
     st.success(f"✅ Resultado previsto: **{resultado.replace('_', ' ')}**")
-
     st.markdown("#### 🧠 Fatores de risco detectados:")
     st.markdown(f"```\n{gerar_explicacao()}\n```")
-
     st.button("🔁 Fazer nova previsão", on_click=lambda: st.experimental_rerun())
