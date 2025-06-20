@@ -110,6 +110,7 @@ if st.button("Prever"):
     st.markdown("#### 📌 Explicação baseada nos seus hábitos:")
     st.markdown(f"```\n{explicacao}\n```")
 
-# Botão para reiniciar
-if st.button("🔄 Iniciar nova previsão"):
-    st.experimental_rerun()
+# Mostrar botão de nova previsão apenas após o resultado
+if "resultado" in locals():
+    if st.button("🔄 Iniciar nova previsão"):
+        st.experimental_rerun()
