@@ -1,40 +1,40 @@
-# Este é o app Streamlit que irá carregar o modelo salvo, coletar os dados do usuário,
-# aplicar as mesmas transformações do pipeline (normalização e codificação)
-# e retornar a predição do nível de obesidade com uma interface simples e intuitiva.
+# Este é o app Streamlit que carrega o modelo de previsão de obesidade.
+# Ele permite que o usuário responda perguntas sobre estilo de vida e saúde,
+# e exibe uma previsão personalizada com base nos dados inseridos.
 
 import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
 
-# Carregar modelo, scaler e label encoder
-modelo = joblib.load("modelo_obesidade.pkl")
+# Carregar o modelo, scaler e label encoder
+modelo = joblib.load("modelo_final.pkl")
 scaler = joblib.load("scaler.pkl")
 label_encoder = joblib.load("label_encoder.pkl")
 
-st.title("🔍 Preditor de Obesidade")
-st.write("Preencha os dados abaixo para prever o nível de obesidade:")
+st.title("🔍 Preditor Personalizado de Obesidade")
+st.write("Responda às perguntas abaixo para receber uma previsão personalizada do seu nível de obesidade.")
 
-# Inputs do usuário
-genero = st.selectbox("Gênero", ["Feminino", "Masculino"])
-idade = st.slider("Idade", 10, 100, 25)
-altura = st.slider("Altura (em metros)", 1.0, 2.5, 1.70)
-peso = st.slider("Peso (em kg)", 30.0, 200.0, 70.0)
-historico_familiar = st.selectbox("Algum familiar sofre ou sofreu com sobrepeso?", ["Sim", "Não"])
-alimentos_caloricos = st.selectbox("Você consome alimentos muito calóricos com frequência?", ["Sim", "Não"])
-vegetais = st.slider("Você costuma comer vegetais nas refeições? (0 = nunca, 3 = sempre)", 0.0, 3.0, 2.0)
-refeicoes_dia = st.slider("Quantas refeições principais você faz por dia?", 1.0, 5.0, 3.0)
+# Entradas do usuário
+genero = st.selectbox("Qual seu gênero?", ["Feminino", "Masculino"])
+idade = st.slider("Qual sua idade?", 10, 100, 25)
+altura = st.slider("Qual sua altura (em metros)?", 1.0, 2.5, 1.70)
+peso = st.slider("Qual seu peso (em kg)?", 30.0, 200.0, 70.0)
+historico_familiar = st.radio("Você tem histórico familiar de sobrepeso?", ["Sim", "Não"])
+alimentos_caloricos = st.radio("Você consome alimentos calóricos com frequência?", ["Sim", "Não"])
+vegetais = st.slider("Com que frequência consome vegetais nas refeições? (0 = nunca, 3 = sempre)", 0.0, 3.0, 2.0)
+refeicoes_dia = st.slider("Quantas refeições principais faz por dia?", 1.0, 5.0, 3.0)
 lanches = st.selectbox("Você costuma comer entre as refeições?", ["Não", "Às vezes", "Frequentemente", "Sempre"])
-fuma = st.selectbox("Você fuma?", ["Sim", "Não"])
+fuma = st.radio("Você fuma?", ["Sim", "Não"])
 agua = st.slider("Quantos litros de água você bebe por dia?", 0.0, 3.0, 2.0)
-controla_calorias = st.selectbox("Você controla a quantidade de calorias que consome?", ["Sim", "Não"])
-atividade_fisica = st.slider("Quantas horas de atividade física você pratica por semana?", 0.0, 5.0, 1.0)
-tempo_tela = st.slider("Tempo de uso de dispositivos tecnológicos por dia (em horas)", 0.0, 5.0, 2.0)
-alcool = st.selectbox("Com que frequência você consome bebida alcoólica?", ["Não", "Às vezes", "Frequentemente", "Sempre"])
-transporte = st.selectbox("Qual meio de transporte você mais utiliza?", 
+controla_calorias = st.radio("Você controla a ingestão calórica?", ["Sim", "Não"])
+atividade_fisica = st.slider("Horas de atividade física por semana:", 0.0, 5.0, 1.0)
+tempo_tela = st.slider("Horas de uso de telas por dia (celular, TV, computador)", 0.0, 5.0, 2.0)
+alcool = st.selectbox("Frequência de consumo de bebidas alcoólicas:", ["Não", "Às vezes", "Frequentemente", "Sempre"])
+transporte = st.selectbox("Meio de transporte mais utilizado:", 
                           ["Transporte público", "A pé", "Carro", "Moto", "Bicicleta"])
 
-# Criar DataFrame com os dados de entrada
+# Montar DataFrame com as features para previsão
 input_data = pd.DataFrame({
     "Age": [idade],
     "Height": [altura],
@@ -69,7 +69,11 @@ input_data = pd.DataFrame({
     "MTRANS_Bike": [1 if transporte == "Bicicleta" else 0]
 })
 
-# Função para gerar explicação com base nos hábitos
+# Garantir ordem correta das colunas
+input_data = input_data[scaler.feature_names_in_]
+input_scaled = scaler.transform(input_data)
+
+# Explicação textual dos fatores
 def gerar_explicacao():
     explicacao = []
 
@@ -78,39 +82,29 @@ def gerar_explicacao():
     if alimentos_caloricos == "Sim":
         explicacao.append("- Consumo frequente de alimentos calóricos")
     if historico_familiar == "Sim":
-        explicacao.append("- Histórico familiar de sobrepeso")
+        explicacao.append("- Histórico familiar de obesidade")
     if atividade_fisica < 1.0:
-        explicacao.append("- Baixa prática de atividade física")
+        explicacao.append("- Baixo nível de atividade física")
     if fuma == "Sim":
-        explicacao.append("- Relatou que fuma")
+        explicacao.append("- Fuma atualmente")
     if alcool in ["Frequentemente", "Sempre"]:
-        explicacao.append("- Consumo frequente de bebida alcoólica")
+        explicacao.append("- Consumo elevado de bebidas alcoólicas")
     if controla_calorias == "Não":
         explicacao.append("- Não controla a ingestão calórica")
     if tempo_tela > 3:
-        explicacao.append("- Muito tempo de exposição a telas")
+        explicacao.append("- Alto tempo de exposição a telas")
 
-    if not explicacao:
-        return "Nenhum fator de risco relevante informado."
-    else:
-        return "\n".join(explicacao)
+    return "Nenhum fator de risco evidente." if not explicacao else "\n".join(explicacao)
 
-# Garantir a ordem e nomes corretos das colunas para o scaler
-input_data = input_data[scaler.feature_names_in_]
-input_scaled = scaler.transform(input_data)
-
-# Previsão
-if st.button("Prever"):
+# Botão de previsão
+if st.button("🔎 Prever nível de obesidade"):
     predicao = modelo.predict(input_scaled)
     resultado = label_encoder.inverse_transform(predicao)[0]
 
-    st.success(f"🔎 Resultado previsto: **{resultado.replace('_', ' ')}**")
+    st.success(f"✅ Resultado previsto: **{resultado.replace('_', ' ')}**")
 
     explicacao = gerar_explicacao()
-    st.markdown("#### 📌 Explicação baseada nos seus hábitos:")
+    st.markdown("#### 🧠 Fatores que podem estar influenciando seu resultado:")
     st.markdown(f"```\n{explicacao}\n```")
 
-# Mostrar botão de nova previsão apenas após o resultado
-if "resultado" in locals():
-    if st.button("🔄 Iniciar nova previsão"):
-        st.experimental_rerun()
+    st.button("🔁 Fazer nova previsão", on_click=lambda: st.experimental_rerun())
