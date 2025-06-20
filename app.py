@@ -68,8 +68,8 @@ input_data = pd.DataFrame({
     "MTRANS_Motorbike": [1 if transporte == "Moto" else 0],
     "MTRANS_Bike": [1 if transporte == "Bicicleta" else 0]
 })
-
-# Normalizar os dados
+# Garantir a ordem e nomes corretos das colunas para o scaler
+input_data = input_data[scaler.feature_names_in_]
 input_scaled = scaler.transform(input_data)
 
 # Fazer a predição
@@ -77,3 +77,4 @@ if st.button("Prever"):
     predicao = modelo.predict(input_scaled)
     resultado = label_encoder.inverse_transform(predicao)[0]
     st.success(f"🔎 Resultado previsto: **{resultado.replace('_', ' ')}**")
+
