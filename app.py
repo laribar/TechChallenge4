@@ -70,8 +70,15 @@ input_data = pd.DataFrame({
 })
 
 # Organizar colunas e aplicar escalonamento
+# Garantir que todas as colunas do scaler estejam no input_data
+for col in scaler.feature_names_in_:
+    if col not in input_data.columns:
+        input_data[col] = 0  # preenche com 0 se a coluna estiver faltando
+
+# Reorganiza na ordem correta
 input_data = input_data[scaler.feature_names_in_]
 input_scaled = scaler.transform(input_data)
+
 
 # Gerar explicações básicas
 def gerar_explicacao():
