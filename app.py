@@ -127,8 +127,26 @@ def gerar_explicacao():
     if pressao == "Sim": riscos.append("- Pressão alta")
     return "Nenhum fator de risco relevante identificado." if not riscos else "\n".join(riscos)
 
+# Dicionário com explicações clínicas
+explicacoes_obesidade = {
+    "Insufficient_Weight": "Abaixo do peso saudável. Pode indicar desnutrição, deficiência alimentar ou condição metabólica.",
+    "Normal_Weight": "Peso considerado saudável de acordo com altura e idade. Mantenha seus hábitos equilibrados!",
+    "Overweight_Level_I": "Sobrepeso leve. Requer atenção para evitar progressão à obesidade.",
+    "Overweight_Level_II": "Sobrepeso moderado. Risco aumentado de desenvolver doenças metabólicas.",
+    "Obesity_Type_I": "Obesidade grau I. Estado clínico inicial de obesidade, requer mudanças no estilo de vida.",
+    "Obesity_Type_II": "Obesidade grau II. Risco elevado de problemas cardíacos, articulares e metabólicos.",
+    "Obesity_Type_III": "Obesidade grau III (mórbida). Risco grave de comorbidades. Requer acompanhamento médico urgente."
+}
+
 if st.session_state.resultado_exibido:
-    st.success(f"✅ Resultado previsto: **{st.session_state.resultado.replace('_', ' ')}**")
+    categoria = st.session_state.resultado
+    descricao = explicacoes_obesidade.get(categoria, "Categoria não reconhecida.")
+    
+    st.success(f"✅ Resultado previsto: **{categoria.replace('_', ' ')}**")
+    st.markdown(f"🩺 **Descrição clínica:**\n> {descricao}")
+    
     st.markdown("#### 🧠 Fatores de risco identificados:")
     st.code(gerar_explicacao())
+    
     st.button("🔁 Fazer nova previsão", on_click=lambda: st.session_state.update({"resultado_exibido": False}))
+
