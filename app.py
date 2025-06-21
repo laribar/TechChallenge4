@@ -211,6 +211,79 @@ elif menu == "📊 Dados do Modelo":
 | Overweight Level I   | 0.93     | 0.86   | 0.89     |
 | Overweight Level II  | 0.96     | 0.91   | 0.94     |
 
+
+### ✅ Resumo Geral do Projeto - Previsão de Obesidade com Machine Learning
+
+🔹 **Etapa 1 — Setup Inicial**  
+• Instalação e importação de bibliotecas  
+• Carregamento da base `obesity.csv`  
+• Visualização das primeiras linhas, tipos de dados e resumo inicial
+
+🔹 **Etapa 2 — Análise da Variável Alvo e Dados Ausentes**  
+• Gráfico de distribuição das categorias de obesidade com rótulos  
+• Verificação de valores nulos
+
+🔹 **Etapa 3 — Preparação dos Dados para Machine Learning**  
+• Padronização de nomes de colunas  
+• One-hot encoding de variáveis categóricas  
+• Escalonamento com `StandardScaler`  
+• Separação entre treino e teste com estratificação
+
+🔹 **Etapa 4 — Treinamento com Random Forest**  
+• Modelo base com `RandomForestClassifier`  
+• Avaliação por acurácia, F1-score e matriz de confusão
+
+🔹 **Etapa 5 — Comparação entre Modelos**  
+• Avaliação de: Logistic Regression, KNN, Decision Tree, SVM, Random Forest  
+• Gráfico de barras com rótulos de acurácia
+
+🔹 **Etapa 6 — Otimização com GridSearchCV**  
+• Busca de hiperparâmetros ideais para Random Forest  
+• Validação cruzada (5-fold)  
+• Novo modelo com acurácia final acima de 92%
+
+🔹 **Etapa 7 — Salvamento de Componentes para Deploy**  
+• Modelo otimizado: `modelo_obesidade.pkl`  
+• Scaler: `scaler.pkl`  
+• LabelEncoder: `label_encoder.pkl`
+
+🔹 **Etapa 8 — Download dos Dados Clínicos da NHANES**  
+• Arquivos `.xpt` carregados automaticamente via GitHub  
+• Organização em pasta `nhanes_data/`
+
+🔹 **Etapa 9 — Leitura e Unificação da NHANES**  
+• Unificação dos arquivos por `SEQN`  
+• DataFrame completo com variáveis clínicas, comportamentais e demográficas
+
+🔹 **Etapa 10 — Seleção de Variáveis Relevantes da NHANES**  
+• Foco em: idade, sexo, diabetes, depressão, álcool, tabagismo, pressão alta, etc.
+
+🔹 **Etapa 11 — Tratamento e Normalização dos Dados Clínicos**  
+• Binarização de variáveis  
+• Imputação de valores nulos  
+• Normalização com `StandardScaler`
+
+🔹 **Etapa 12 — Criação da Base Personalizada**  
+• Fusão de `obesity.csv` com dados clínicos simulados da NHANES  
+• Novo arquivo salvo: `obesity_personalized.csv`
+
+🔹 **Etapa 13 — Treinamento Final com Base Enriquecida**  
+• Novo treinamento com base personalizada  
+• One-hot encoding + scaler + Random Forest  
+• Avaliação com `classification_report` e salvamento completo
+
+🔹 **Etapa 14 — Interpretação com Importância das Variáveis**  
+• Gráfico horizontal com as 15 features mais influentes  
+• Rótulos de importância visíveis
+
+🔹 **Etapa 15 — Avaliação Final e Matriz de Confusão**  
+• Avaliação do modelo final com `classification_report`  
+• Matriz de confusão visualizada com `heatmap`
+
+🔹 **Etapa 16 — Matriz de Correlação**  
+• Heatmap de correlação entre todas as variáveis numéricas  
+• Análise exploratória de relações entre idade, álcool, depressão, etc.
+
 ### 🔗 Repositório do código
 [🔗 GitHub do projeto](https://github.com/laribar/TechChallenge4)
 
