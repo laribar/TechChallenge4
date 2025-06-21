@@ -6,7 +6,12 @@ from PIL import Image, ImageDraw
 import os
 
 # ---------- MENU LATERAL ----------
-menu = st.sidebar.selectbox("📂 Navegação", ["📋 Avaliação Pessoal", "📊 Dados do Modelo"])
+menu = st.sidebar.selectbox("📂 Navegação", [
+    "📋 Avaliação Pessoal",
+    "📊 Dados do Modelo",
+    "📈 Análise Exploratória"
+])
+
 
 if menu == "📋 Avaliação Pessoal":
 
@@ -211,3 +216,43 @@ elif menu == "📊 Dados do Modelo":
 """)
     st.subheader("🔍 Correlação entre Variáveis")
     st.image("matriz.png", caption="Matriz de Correlação entre Variáveis Numéricas", use_container_width=True)
+elif menu == "📈 Análise Exploratória":
+    st.title("📈 Análise Exploratória dos Dados")
+
+    @st.cache_data
+    def carregar_base_exploratoria():
+        df = pd.read_csv("obesity_personalized.csv")
+        df["BMI"] = df["Weight"] / (df["Height"] ** 2)
+        return df
+
+    df = carregar_base_exploratoria()
+
+    st.markdown("Explore os dados utilizados no modelo e visualize relações importantes entre variáveis.")
+
+    # Distribuição da variável alvo
+    st.subheader("Distribuição das Categorias de Obesidade")
+    fig1, ax1 = plt.subplots()
+    sns.countplot(data=df, x="Obesity", order=df["Obesity"].value_counts().index, ax=ax1)
+    for p in ax1.patches:
+        ax1.text(p.get_x() + p.get_width()/2, p.get_height() + 3, int(p.get_height()), ha='center')
+    ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45)
+    st.pyplot(fig1)
+
+    # Dispersão Idade vs Peso
+    st.subheader("Idade vs Peso por Categoria de Obesidade")
+    fig2, ax2 = plt.subplots()
+    sns.scatterplot(data=df, x="Age", y="Weight", hue="Obesity", ax=ax2)
+    st.pyplot(fig2)
+
+    # Distribuição do IMC
+    st.subheader("Distribuição do IMC (Índice de Massa Corporal)")
+    fig3, ax3 = plt.subplots()
+    sns.histplot(df["BMI"], kde=True, bins=30, ax=ax3)
+    st.pyplot(fig3)
+
+    # Matriz de Correlação
+    st.subheader("Correlação entre Variáveis Numéricas")
+    corr = df.select_dtypes(include='number').corr()
+    fig4, ax4 = plt.subplots(figsize=(10, 8))
+    sns.heatmap(corr, annot=True, fmt=".2f", cmap="coolwarm", ax=ax4)
+    st.pyplot(fig4)
