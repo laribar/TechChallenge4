@@ -4,17 +4,20 @@ import joblib
 import numpy as np
 from PIL import Image, ImageDraw
 import os
-import matplotlib.pyplot as plt  
-import seaborn as sns             
+import matplotlib.pyplot as plt
+import seaborn as sns
+import random
+from datetime import datetime, timedelta
+from sklearn.linear_model import LinearRegression          
+import matplotlib.dates as mdates 
 
 
 # ---------- MENU LATERAL ----------
-menu = st.sidebar.selectbox("📂 Navegação", [
+menu = st.sidebar.radio("📂 Navegação", [
     "📋 Avaliação Pessoal",
     "📊 Dados do Modelo",
     "📈 Análise Exploratória"
 ])
-
 
 if menu == "📋 Avaliação Pessoal":
 
@@ -22,21 +25,26 @@ if menu == "📋 Avaliação Pessoal":
     st.set_page_config(page_title="Preditor de Obesidade", layout="centered")
     st.markdown("""
     <style>
-        body {
-            background-color: #0e1117;
-            color: white;
-        }
-        .stButton>button {
-            background-color: #3b5e62;
-            color: white;
-            border-radius: 8px;
-            font-weight: bold;
-            padding: 0.5em 1.5em;
-            border: none;
-        }
-        .stSelectbox, .stSlider {
-            font-weight: 500;
-        }
+    body {
+        background-color: #0e1117;
+        color: white;
+        font-family: 'Inter', sans-serif;
+    }
+    header, footer {
+        visibility: hidden;
+    }
+    .stButton>button {
+        background-color: #3b5e62;
+        color: white;
+        border-radius: 8px;
+        font-weight: bold;
+        padding: 0.5em 1.5em;
+        border: none;
+        width: 100%;
+    }
+    input, select, textarea {
+        border-radius: 8px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -66,14 +74,14 @@ if menu == "📋 Avaliação Pessoal":
         with col1:
             historico_familiar = st.radio("Histórico familiar de sobrepeso?", ["Sim", "Não"], horizontal=True)
             alimentos_caloricos = st.radio("Consome alimentos calóricos com frequência?", ["Sim", "Não"], horizontal=True)
-            vegetais = st.slider("Frequência de vegetais na alimentação (0 = nunca, 3 = sempre)", 0.0, 3.0, 1.0)
-            refeicoes_dia = st.slider("Refeições principais por dia", 1.0, 5.0, 3.0)
+            vegetais = st.slider("Frequência de vegetais na alimentação (0 = nunca, 3 = sempre)", 0, 3, 1)
+            refeicoes_dia = st.slider("Refeições principais por dia", 1, 5, 3)
             lanches = st.selectbox("Costuma comer entre as refeições?", ["Não", "Às vezes", "Frequentemente", "Sempre"])
-            agua = st.slider("Litros de água por dia", 0.0, 3.0, 2.0)
+            agua = st.slider("Litros de água por dia",0.0, 5.0, 2.0, step=0.1)
             controla_calorias = st.radio("Controla ingestão calórica?", ["Sim", "Não"], horizontal=True)
         with col2:
-            atividade_fisica = st.slider("Horas de atividade física por semana", 0.0, 5.0, 1.0)
-            tempo_tela = st.slider("Horas de uso de telas por dia", 0.0, 5.0, 2.0)
+            atividade_fisica = st.slider("Horas de atividade física por semana", 0.0, 10.0, 1.0, step=0.5)
+            tempo_tela = st.slider("Horas de uso de telas por dia", 0.0, 24.0, 2.0, step=0.5)
             transporte = st.selectbox("Meio de transporte mais usado", ["Transporte público", "A pé", "Carro", "Moto", "Bicicleta"])
             diabetes = st.radio("Já foi diagnosticado com diabetes?", ["Sim", "Não"], horizontal=True)
             pressao = st.radio("Tem pressão alta?", ["Sim", "Não"], horizontal=True)
@@ -120,14 +128,17 @@ if menu == "📋 Avaliação Pessoal":
                 "ALQ130": 0 if alcool == "Não" else 1 if alcool == "Às vezes" else 2 if alcool == "Frequentemente" else 3,
                 "SMQ020": 1.0 if fuma == "Sim" else 0.0
             }
-
             input_df = pd.DataFrame([input_dict]).reindex(columns=feature_columns, fill_value=0)
             input_scaled = scaler.transform(input_df)
             pred = modelo.predict(input_scaled)
             resultado = label_encoder.inverse_transform(pred)[0]
             st.session_state.resultado = resultado
             st.session_state.resultado_exibido = True
-
+            st.session_state['pred_categoria'] = resultado          
+            st.session_state['dados_usuario'] = {                
+                'peso': peso,
+                'altura': altura
+            }
     # ---------- RESULTADO ----------
     def gerar_explicacao():
         riscos = []
@@ -184,16 +195,222 @@ if menu == "📋 Avaliação Pessoal":
         st.markdown("#### 🧠 Fatores de risco identificados:")
         st.code(gerar_explicacao())
         st.button("🔁 Fazer nova previsão", on_click=lambda: st.session_state.update({"resultado_exibido": False}))
+        st.markdown("---")
+        
 
+    # =====================================================
+    # 🛠️  FUNÇÕES AUXILIARES
+    # =====================================================
+    def calcular_imc(peso, altura):
+        return peso / (altura ** 2)
+
+    def calcular_peso_ideal(altura, imc_ideal=24.9):
+        return imc_ideal * (altura ** 2)
+
+    def estimar_tempo_ate_meta(peso_atual, peso_ideal, deficit_diario):
+        if deficit_diario <= 0:
+            return None
+        kg_a_perder = max(0, peso_atual - peso_ideal)
+        dias = (kg_a_perder * 7700) / deficit_diario
+        return max(1, round(dias / 30, 1))          # em meses
+
+    def sugestao_treino(tipo, freq, categoria=None):
+        if freq < 2 or tipo == "Nenhum":
+            return "Inclua caminhadas leves 3×/sem e, depois, exercícios de força."
+        if tipo == "Caminhada/Leve":
+            return "Mantenha a caminhada e acrescente 1-2 sessões de musculação."
+        if tipo == "Musculação":
+            return "Varie exercícios e aumente intensidade gradualmente."
+        return "Continue ativo(a) e mantenha regularidade."
+
+    def metas(categoria, cal_media, freq, peso):
+        if categoria.startswith("Obesity"):
+            return cal_media-300, max(3, freq+1), max(90, round(peso*1.5))
+        if "Overweight" in categoria:
+            return cal_media-150, max(2, freq), round(peso*1.2)
+        return cal_media, freq, round(peso*1.2)
+
+    # =====================================================
+    # 🗺️  PLANO PERSONALIZADO
+    # =====================================================
+    def bloco_plano_personalizado(peso, altura, categoria): 
+        st.header("🏁 Plano para Chegar ao Peso Saudável")
+
+        # se o plano já foi gerado em execuções anteriores,
+        # apenas recupera as metas salvas
+        if not st.session_state.get("plano_ok"):
+            sono = st.slider("Sono (h/noite)", 0.0, 12.0, 7.0, .5)
+            agua = st.slider("Água (L/dia)",   0.0, 5.0,  2.0, .1)
+            freq = st.selectbox("Dias de treino/semana", list(range(8)), 3)
+            tipo = st.selectbox("Tipo de treino",
+                                ["Nenhum","Caminhada/Leve","Musculação",
+                                "Funcional/HIIT","Outro"])
+            cal_m = st.number_input("Calorias médias/dia", 800, 5000, 1800, 50)
+            gerar = st.button("📈 Gerar Plano Personalizado")
+
+            if not gerar:                       # botão ainda não clicado
+                return False, None, None, None
+
+            # ---------- calcula metas ----------
+            meta_cal, meta_tre, meta_prot = metas(categoria, cal_m, freq, peso)
+            peso_ideal = calcular_peso_ideal(altura)
+            meses = estimar_tempo_ate_meta(peso, peso_ideal, cal_m - meta_cal)
+
+            st.markdown(f"""
+    **🎯 Meta saudável:** `{peso_ideal:.1f} kg`  
+    - Peso atual: `{peso:.1f} kg` • KG a perder: `{max(0,peso-peso_ideal):.1f}`  
+    - Calorias ≤ **{meta_cal}** • Proteína ≥ **{meta_prot} g** • Treino ≥ **{meta_tre}×/sem**
+
+    **Sugestão de treino:** {sugestao_treino(tipo, freq, categoria)}
+
+    **⏳ Tempo estimado:** `{meses or '--'} meses`
+    """)
+            if agua < 2: st.info("💧 Beba pelo menos 2 L de água/dia.")
+            if sono < 7: st.info("😴 Durma ≥ 7 h/noite para melhores resultados.")
+
+            # ---------- guarda no estado ----------
+            st.session_state.update({
+                "plano_ok" : True,
+                "meta_cal" : meta_cal,
+                "meta_prot": meta_prot,
+                "meta_tre" : meta_tre
+            })
+
+        # se já existia, devolve metas armazenadas
+        return True, st.session_state["meta_cal"], \
+                    st.session_state["meta_prot"], st.session_state["meta_tre"]
+    # =====================================================
+    # 📊 GERA HISTÓRICO DEMO (25 dias)
+    # =====================================================
+    def gerar_historico(cal, prot, tre, peso0, dias=25):
+        datas  = [datetime.today() - timedelta(d) for d in reversed(range(dias))]
+        pesos  = [
+            peso0 - (i * 0.18) + np.random.uniform(-0.2, 0.2)
+            for i in reversed(range(dias))
+        ]
+
+        # probabilidade de 0 min de treino não pode ser negativa
+        p_zero = max(0.0, 1 - tre / 7)
+        probs  = [p_zero, 0.25, 0.25, 0.25, 0.25]
+        # normalizar para garantir soma = 1
+        probs  = [p / sum(probs) for p in probs]
+
+        df = pd.DataFrame({
+            "Data"        : [d.date() for d in datas],
+            "Peso"        : [round(p, 1) for p in pesos],
+            "Calorias"    : [int(np.random.normal(cal + 80, 70)) for _ in datas],
+            "Proteina"    : [int(np.random.normal(prot - 10, 6)) for _ in datas],
+            "Sono"        : [round(np.random.normal(7.2, 1), 1) for _ in datas],
+            "Tempo_Treino": [
+                int(np.random.choice([0, 20, 30, 40, 60], p=probs))
+                for _ in datas
+            ],
+            "Tipo_Treino" : [
+                random.choice(["Cardio", "Musculação", "Funcional", "Nenhum"])
+                for _ in datas
+            ]
+        })
+
+        df.to_csv("registro_diario.csv", index=False)
+   # =====================================================
+# 📅 DIÁRIO DE ACOMPANHAMENTO
+# =====================================================
+    def bloco_diario_acompanhamento(meta_cal, meta_prot, meta_tre):
+        st.header("📅 Diário de Acompanhamento")
+        st.markdown(
+            f"**Metas:** Calorias ≤ {meta_cal} | "
+            f"Proteína ≥ {meta_prot} g | Treino ≥ {meta_tre}×/sem"
+        )
+
+        # ───────── formulário (sem clear_on_submit) ─────────
+        with st.form("form_registro_diario"):
+            data = st.date_input("Data", value=datetime.today())
+            peso = st.number_input("Peso (kg)", 30.0, 200.0, step=0.1)
+            cal  = st.number_input("Calorias", 0, 5000, step=50)
+            prot = st.number_input("Proteína (g)", 0, 300, step=5)
+            sono = st.number_input("Sono (h)", 0.0, 24.0, step=0.5)
+            tmin = st.number_input("Treino (min)", 0, 300, step=5)
+            tipo = st.selectbox(
+                "Tipo treino",
+                ["Nenhum", "Cardio", "Musculação", "Funcional", "Outro"]
+            )
+            submitted = st.form_submit_button("💾 Salvar Registro")
+
+        # -------- gravação --------
+        if submitted:
+            reg = {
+                "Data": data, "Peso": peso, "Calorias": cal, "Proteina": prot,
+                "Sono": sono, "Tempo_Treino": tmin, "Tipo_Treino": tipo
+            }
+            try:
+                df = pd.read_csv("registro_diario.csv")
+                df = pd.concat([df, pd.DataFrame([reg])], ignore_index=True)
+            except FileNotFoundError:
+                df = pd.DataFrame([reg])
+
+            df.to_csv("registro_diario.csv", index=False)
+            st.success("Registro salvo & adicionado ao histórico!")
+
+        # -------- gráfico sempre atualizado --------
+        st.subheader("📈 Evolução do Peso")
+        try:
+            df = pd.read_csv("registro_diario.csv")
+            df["Data"] = pd.to_datetime(df["Data"])
+            df = df.sort_values("Data")           # garante ordem cronológica
+
+            fig, ax = plt.subplots(figsize=(8, 5))
+            sns.lineplot(data=df, x="Data", y="Peso",
+                        marker="o", ax=ax, color="#2F9FF8", label="Peso")
+
+            if len(df) > 2:
+                X = df["Data"].map(pd.Timestamp.toordinal).values.reshape(-1, 1)
+                y_pred = LinearRegression().fit(X, df["Peso"]).predict(X)
+                ax.plot(df["Data"], y_pred, ls="--", color="red", label="Tendência")
+
+            ax.set(xlabel="Data", ylabel="Peso (kg)")
+            ax.grid(ls=":", alpha=.4)
+            ax.legend()
+            ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%d/%m'))
+            fig.autofmt_xdate()
+            st.pyplot(fig)
+
+        except FileNotFoundError:
+            st.info("Histórico ainda não criado.")
+    # =====================================================
+    # 🔄  FLUXO APÓS A PREVISÃO
+    # =====================================================
+    if 'pred_categoria' in st.session_state:
+        categoria = st.session_state['pred_categoria']
+        peso      = st.session_state['dados_usuario']['peso']
+        altura    = st.session_state['dados_usuario']['altura']
+
+        ok, mc, mp, mt = bloco_plano_personalizado(peso, altura, categoria)
+
+        if ok and 'historico_criado' not in st.session_state:
+            gerar_historico(mc, mp, mt, peso)
+            st.session_state['historico_criado'] = True
+            st.success("Histórico de 25 dias gerado automaticamente!")
+
+        # o diário aparece sempre que plano_ok==True
+        if st.session_state.get("plano_ok"):
+            st.markdown("---")
+            bloco_diario_acompanhamento(
+                st.session_state["meta_cal"],
+                st.session_state["meta_prot"],
+                st.session_state["meta_tre"]
+            )
+
+    # ----------- DADOS DO MODELO -----------
 elif menu == "📊 Dados do Modelo":
     st.title("📊 Dados do Modelo")
     st.markdown("""
 ### 📚 Fonte dos dados
-- Base: `Obesity.csv` fornecida no desafio Tech Challenge
+- Base: Obesity.csv fornecida no desafio Tech Challenge
 - Dados sobre hábitos alimentares, saúde e estilo de vida
 
 ### 🧠 Algoritmo
-- `RandomForestClassifier` (modelo de classificação por árvores)
+- RandomForestClassifier (modelo de classificação por árvores)
 - Divisão de treino/teste: 80% treino, 20% teste
 - Validação estratificada para manter a distribuição das classes
 
@@ -216,7 +433,7 @@ elif menu == "📊 Dados do Modelo":
 
 🔹 **Etapa 1 — Setup Inicial**  
 • Instalação e importação de bibliotecas  
-• Carregamento da base `obesity.csv`  
+• Carregamento da base obesity.csv  
 • Visualização das primeiras linhas, tipos de dados e resumo inicial
 
 🔹 **Etapa 2 — Análise da Variável Alvo e Dados Ausentes**  
@@ -226,11 +443,11 @@ elif menu == "📊 Dados do Modelo":
 🔹 **Etapa 3 — Preparação dos Dados para Machine Learning**  
 • Padronização de nomes de colunas  
 • One-hot encoding de variáveis categóricas  
-• Escalonamento com `StandardScaler`  
+• Escalonamento com StandardScaler  
 • Separação entre treino e teste com estratificação
 
 🔹 **Etapa 4 — Treinamento com Random Forest**  
-• Modelo base com `RandomForestClassifier`  
+• Modelo base com RandomForestClassifier  
 • Avaliação por acurácia, F1-score e matriz de confusão
 
 🔹 **Etapa 5 — Comparação entre Modelos**  
@@ -243,16 +460,16 @@ elif menu == "📊 Dados do Modelo":
 • Novo modelo com acurácia final acima de 92%
 
 🔹 **Etapa 7 — Salvamento de Componentes para Deploy**  
-• Modelo otimizado: `modelo_obesidade.pkl`  
-• Scaler: `scaler.pkl`  
-• LabelEncoder: `label_encoder.pkl`
+• Modelo otimizado: modelo_obesidade.pkl  
+• Scaler: scaler.pkl  
+• LabelEncoder: label_encoder.pkl
 
 🔹 **Etapa 8 — Download dos Dados Clínicos da NHANES**  
-• Arquivos `.xpt` carregados automaticamente via GitHub  
-• Organização em pasta `nhanes_data/`
+• Arquivos .xpt carregados automaticamente via GitHub  
+• Organização em pasta nhanes_data/
 
 🔹 **Etapa 9 — Leitura e Unificação da NHANES**  
-• Unificação dos arquivos por `SEQN`  
+• Unificação dos arquivos por SEQN  
 • DataFrame completo com variáveis clínicas, comportamentais e demográficas
 
 🔹 **Etapa 10 — Seleção de Variáveis Relevantes da NHANES**  
@@ -261,24 +478,24 @@ elif menu == "📊 Dados do Modelo":
 🔹 **Etapa 11 — Tratamento e Normalização dos Dados Clínicos**  
 • Binarização de variáveis  
 • Imputação de valores nulos  
-• Normalização com `StandardScaler`
+• Normalização com StandardScaler
 
 🔹 **Etapa 12 — Criação da Base Personalizada**  
-• Fusão de `obesity.csv` com dados clínicos simulados da NHANES  
-• Novo arquivo salvo: `obesity_personalized.csv`
+• Fusão de obesity.csv com dados clínicos simulados da NHANES  
+• Novo arquivo salvo: obesity_personalized.csv
 
 🔹 **Etapa 13 — Treinamento Final com Base Enriquecida**  
 • Novo treinamento com base personalizada  
 • One-hot encoding + scaler + Random Forest  
-• Avaliação com `classification_report` e salvamento completo
+• Avaliação com classification_report e salvamento completo
 
 🔹 **Etapa 14 — Interpretação com Importância das Variáveis**  
 • Gráfico horizontal com as 15 features mais influentes  
 • Rótulos de importância visíveis
 
 🔹 **Etapa 15 — Avaliação Final e Matriz de Confusão**  
-• Avaliação do modelo final com `classification_report`  
-• Matriz de confusão visualizada com `heatmap`
+• Avaliação do modelo final com classification_report  
+• Matriz de confusão visualizada com heatmap
 
 🔹 **Etapa 16 — Matriz de Correlação**  
 • Heatmap de correlação entre todas as variáveis numéricas  
@@ -288,7 +505,7 @@ elif menu == "📊 Dados do Modelo":
 [🔗 GitHub do projeto](https://github.com/laribar/TechChallenge4)
 
 ### 🔎 Bibliotecas utilizadas
-- `streamlit`, `pandas`, `numpy`, `scikit-learn`, `joblib`, `Pillow`
+- streamlit, pandas, numpy, scikit-learn, joblib, Pillow
 """)
     st.subheader("🔍 Correlação entre Variáveis")
     st.image("matriz.png", caption="Matriz de Correlação entre Variáveis Numéricas", use_container_width=True)
