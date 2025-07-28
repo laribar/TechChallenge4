@@ -609,8 +609,8 @@ elif menu == "📊 Dashboard Geral":
     mostrar_dashboard_geral()
 
     # ----------- DADOS DO MODELO -----------
-elif menu == "📊 Dados do Modelo":
-    st.title("📊 Dados do Modelo")
+elif menu == "🧬 Dados do Modelo":
+    st.title("🧬 Dados do Modelo")
     st.markdown("""
 ### 📚 Fonte dos dados
 - Base: Obesity.csv fornecida no desafio Tech Challenge
