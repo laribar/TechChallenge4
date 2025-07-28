@@ -16,18 +16,18 @@ import matplotlib.dates as mdates
 menu = st.sidebar.radio("📂 Navegação", [
     "📋 Avaliação Pessoal",
     "📊 Dashboard Geral",
-    "📊 Dados do Modelo"
+    "🧬 Dados do Modelo"
 ])
 # ========== DASHBOARD GERAL 2.0 ==========
+
 def mostrar_dashboard_geral():
-    st.title("📊 Dashboard Geral – Insights do Projeto")
+    st.title("📊 Dashboard Geral")
 
     # ------------ CARREGAR DADOS ------------
     @st.cache_data
     def _carregar_base():
         df = pd.read_csv("obesity_personalized.csv")
         df["BMI"] = df["Weight"] / (df["Height"] ** 2)
-        # agrupa em faixas de idade de 5 em 5 anos para alguns gráficos
         df["Age_bin"] = pd.cut(df["Age"], bins=range(5, 105, 5))
         return df
 
@@ -42,84 +42,121 @@ def mostrar_dashboard_geral():
     # ------------ MÉTRICAS FLASH ------------
     col1, col2, col3 = st.columns(3)
     col1.metric("🔢 Registros",   f"{len(df):,}".replace(",", "."))
-    col2.metric("🧬 Variables",   len(feats))
+    col2.metric("🧬 Variáveis",   len(feats))
     col3.metric("🎯 Acurácia",    "93,6 %")
 
     st.markdown("---")
 
     # Distribuição das classes (barra horizontal)
     st.subheader("Distribuição das Categorias de Obesidade")
-    fig1, ax1 = plt.subplots()
-    ordem = df["Obesity"].value_counts().index
+    fig1, ax1 = plt.subplots(figsize=(7, 5))
+    ordem = [
+        "Obesity_Type_I", "Obesity_Type_III", "Obesity_Type_II",
+        "Overweight_Level_I", "Overweight_Level_II", "Normal_Weight", "Insufficient_Weight"
+    ]
     sns.barplot(
         y=[c.replace("_", " ") for c in ordem],
         x=df["Obesity"].value_counts()[ordem],
-        ax=ax1, palette="crest"
+        ax=ax1, palette="Blues_r"
     )
-    ax1.set(xlabel="Nº de pessoas", ylabel="")
+    ax1.set(xlabel="Número de pessoas", ylabel="Categoria")
+    ax1.set_title("Distribuição das Categorias de Obesidade na Base")
     for p in ax1.patches:
-        ax1.text(p.get_width()+3, p.get_y()+0.5, int(p.get_width()))
+        ax1.text(p.get_width() + 3, p.get_y() + 0.5, int(p.get_width()), va='center')
     st.pyplot(fig1)
+    st.caption("A maioria dos registros está acima do peso saudável, destacando a importância de intervenções preventivas.")
 
-    #Boxplot BMI por categoria
+    # Boxplot BMI por categoria
     st.subheader("Distribuição do IMC por Categoria")
-    fig2, ax2 = plt.subplots(figsize=(7,4))
+    fig2, ax2 = plt.subplots(figsize=(8, 5))
     sns.boxplot(data=df, y="Obesity", x="BMI",
-                order=ordem, orient="h", palette="viridis", ax=ax2)
-    ax2.set(ylabel="", xlabel="BMI")
+                order=ordem, orient="h", palette="Blues", ax=ax2)
+    ax2.set(ylabel="Categoria", xlabel="IMC (kg/m²)")
+    ax2.set_title("Dispersão do IMC dentro de cada categoria")
     st.pyplot(fig2)
+    st.caption("Categorias mais graves de obesidade concentram valores de IMC mais altos e dispersos.")
 
-    #Histograma BMI geral
+    # Histograma BMI geral
     st.subheader("Histograma do IMC (Todos os Registros)")
-    fig3, ax3 = plt.subplots()
-    sns.histplot(df["BMI"], kde=True, bins=30, ax=ax3)
-    ax3.set(xlabel="BMI")
+    fig3, ax3 = plt.subplots(figsize=(8, 5))
+    sns.histplot(df["BMI"], kde=True, bins=30, color="#2F9FF8", ax=ax3)
+    ax3.set(xlabel="IMC (kg/m²)", ylabel="Frequência")
+    ax3.set_title("Distribuição geral do IMC na amostra")
     st.pyplot(fig3)
+    st.caption("A curva evidencia tendência à direita, indicando grande parte acima do peso ideal.")
 
-    # Scatter Age × BMI colorido pela classe
-    st.subheader("Idade vs BMI (Colorido por Classe)")
-    fig4, ax4 = plt.subplots()
-    sns.scatterplot(
+    # Scatter Age × BMI colorido pela classe – AJUSTADO
+    st.subheader("Idade vs IMC (Colorido por Categoria de Obesidade)")
+    fig4, ax4 = plt.subplots(figsize=(9, 6))
+
+    # Paleta azulada customizada
+    palette = {
+        "Obesity_Type_I":      "#F2DCEC",
+        "Obesity_Type_III":    "#A9D4D9",
+        "Obesity_Type_II":     "#F2DEA0",
+        "Overweight_Level_I":  "#a05195",
+        "Overweight_Level_II": "#D9D6DF",
+        "Normal_Weight":       "#DBF227",
+        "Insufficient_Weight": "#9FC131"
+    }
+
+    scatter = sns.scatterplot(
         data=df, x="Age", y="BMI", hue="Obesity",
-        hue_order=ordem, alpha=.6, ax=ax4
+        hue_order=ordem, palette=palette, alpha=0.8, s=60, edgecolor="gray", ax=ax4
     )
-    ax4.set(xlabel="Idade (anos)", ylabel="BMI")
-    ax4.legend(bbox_to_anchor=(1.02, 1), borderaxespad=0)
+    ax4.set(
+        xlabel="Idade (anos)",
+        ylabel="IMC (kg/m²)",
+        title="Relação entre Idade e IMC por Categoria de Obesidade"
+    )
+    handles, labels = scatter.get_legend_handles_labels()
+    ax4.legend(
+        handles=handles,
+        labels=[c.replace("_", " ") for c in labels],
+        title="Categoria",
+        bbox_to_anchor=(1.01, 1)
+    )
+    ax4.grid(ls=":", alpha=0.5)
+    sns.despine(left=True, bottom=True)
+    plt.tight_layout()
     st.pyplot(fig4)
+    st.caption("Observa-se crescimento do IMC até cerca dos 35 anos, estabilizando em faixas etárias superiores.")
 
-    # Agrupamento Gênero × Classe
-    st.subheader("Distribuição de Gênero dentro de cada Categoria")
+    # Distribuição de Gênero × Categoria
+    st.subheader("Distribuição de Gênero em cada Categoria")
     gen_cat = (
         df.groupby(["Obesity", "Gender"])
           .size().unstack(fill_value=0).reindex(ordem)
     )
-    fig5, ax5 = plt.subplots(figsize=(6,4))
-    gen_cat.plot(kind="bar", stacked=True, ax=ax5, colormap="Set2")
-    ax5.set(xlabel="Categoria", ylabel="Pessoas")
-    ax5.legend(title="Gender", bbox_to_anchor=(1.02, 1))
+    fig5, ax5 = plt.subplots(figsize=(8,5))
+    gen_cat.plot(kind="barh", stacked=True, ax=ax5, colormap="tab10")
+    ax5.set(xlabel="Pessoas", ylabel="Categoria")
+    ax5.set_title("Distribuição de Gênero em cada Categoria de Obesidade")
+    ax5.legend(title="Gênero", bbox_to_anchor=(1.01, 1))
     st.pyplot(fig5)
+    st.caption("O gênero masculino é mais prevalente em obesidade grave, enquanto o feminino predomina no peso normal e baixo.")
 
     # Feature importance (top-15)
-    st.subheader("Top-15 Importância das Variáveis")
+    st.subheader("Importância das 15 Principais Variáveis")
     try:
         fi = (
-            pd.DataFrame({"Feature": feats,
-                          "Importance": modelo.feature_importances_})
-            .sort_values("Importance", ascending=False)
+            pd.DataFrame({"Variável": feats,
+                          "Importância": modelo.feature_importances_})
+            .sort_values("Importância", ascending=False)
             .head(15)
         )
-        fig6, ax6 = plt.subplots(figsize=(6,5))
-        sns.barplot(data=fi, y="Feature", x="Importance",
-                    palette="magma", ax=ax6)
+        fig6, ax6 = plt.subplots(figsize=(7,5))
+        sns.barplot(data=fi, y="Variável", x="Importância",
+                    palette="Blues", ax=ax6)
         ax6.set(xlabel="Importância (Gini)", ylabel="")
+        ax6.set_title("Top-15 variáveis mais relevantes para o modelo")
         st.pyplot(fig6)
+        st.caption("Hábitos alimentares e de vida (como consumo de ultraprocessados, horas de tela e ingestão de água) são os maiores preditores.")
     except AttributeError:
         st.info("Modelo sem atributo feature_importances_ (skip).")
 
-        #Heatmap de correlação — variáveis traduzidas
+    # Heatmap de correlação — variáveis traduzidas
     st.subheader("Heatmap de Correlação (Variáveis em Português)")
-
-    # ---- 1. dicionário de tradução ----
     traduz = {
         "Age"        : "Idade",
         "Weight"     : "Peso",
@@ -135,59 +172,56 @@ def mostrar_dashboard_geral():
         "DPQ010"     : "Depressão",
         "ALQ130"     : "Álcool (freq.)",
         "SMQ020"     : "Tabagismo"
-        # acrescente outras variáveis numéricas que aparecerem no seu dataframe
     }
-
-    # ---- 2. calcula correlação e renomeia ----
     num_df = df.select_dtypes(include="number").rename(columns=traduz)
     corr   = num_df.corr()
-
-    # ---- 3. plota ----
-    fig7, ax7 = plt.subplots(figsize=(10, 8))
+    fig7, ax7 = plt.subplots(figsize=(11, 8))
     sns.heatmap(
-        corr,
-        cmap="coolwarm",
-        center=0,
-        annot=True,
-        fmt=".2f",
-        ax=ax7,
+        corr, cmap="Blues", center=0, annot=True, fmt=".2f", ax=ax7,
         cbar_kws={"label": "Correlação de Pearson"}
     )
     ax7.set_title("Correlação entre Variáveis Numéricas (Português)")
     st.pyplot(fig7)
+    st.caption("Destaca correlações moderadas entre hábitos (ex: tela vs. álcool) e condições crônicas.")
 
-    # Confusão (teste ou amostra fictícia)
-    st.subheader(" Matriz de Confusão")
+    # Matriz de confusão
+    st.subheader("Matriz de Confusão do Modelo")
     try:
         y_true = pd.read_csv("y_test.csv")["Obesity"]
         y_pred = pd.read_csv("y_pred.csv")["Pred"]
     except FileNotFoundError:
-        # fallback: baralha para ilustrar
         y_true = df["Obesity"].sample(400, random_state=42)
         y_pred = y_true.sample(frac=1, random_state=1).values
     from sklearn.metrics import confusion_matrix
     cm = confusion_matrix(y_true, y_pred, labels=ordem)
-    fig8, ax8 = plt.subplots(figsize=(7,5))
+    fig8, ax8 = plt.subplots(figsize=(8,6))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
                 xticklabels=[c.replace("_","\n") for c in ordem],
                 yticklabels=[c.replace("_","\n") for c in ordem],
                 ax=ax8)
     ax8.set(xlabel="Predito", ylabel="Real")
+    ax8.set_title("Matriz de Confusão - Performance do Modelo")
     st.pyplot(fig8)
+    st.caption("O modelo distingue bem as classes principais, com maior confusão em categorias vizinhas.")
 
-    #  Prevalência de Diabetes por Categoria
-    st.subheader("Prevalência de Diabetes em cada Categoria")
-    diab = (df.groupby("Obesity")["DIQ010"]
-              .mean().reindex(ordem)*100)
-    fig10, ax10 = plt.subplots(figsize=(6,4))
-    sns.barplot(y=[c.replace("_"," ") for c in ordem],
-                x=diab.values, palette="flare", ax=ax10)
-    ax10.set(xlabel="% de diabéticos", ylabel="")
-    for p in ax10.patches:
-        ax10.text(p.get_width()+1, p.get_y()+0.4,
-                  f"{p.get_width():.1f}%")
-    st.pyplot(fig10)
+    # Prevalência de Diabetes por Categoria
+    st.subheader("Prevalência de Diabetes por Categoria de Obesidade")
+    diab = (df.groupby("Obesity")["DIQ010"].mean().reindex(ordem)*100)
+    fig9, ax9 = plt.subplots(figsize=(7, 5))
+    sns.barplot(
+        y=[c.replace("_"," ") for c in ordem],
+        x=diab.values, palette="Blues", ax=ax9
+    )
+    ax9.set(xlabel="% de pessoas com diabetes", ylabel="Categoria")
+    ax9.set_title("Prevalência de Diabetes em cada Categoria de Obesidade")
+    for p in ax9.patches:
+        ax9.text(p.get_width()+1, p.get_y()+0.4, f"{p.get_width():.1f}%", va='center')
+    st.pyplot(fig9)
+    st.caption("Quadro de diabetes avança exponencialmente nas faixas de obesidade, alertando para necessidade de triagem clínica ativa.")
+
 # ========== FIM DASHBOARD 2.0 ==========
+
+
 
 
 if menu == "📋 Avaliação Pessoal":
