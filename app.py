@@ -227,7 +227,7 @@ def mostrar_dashboard_geral():
 if menu == "📋 Avaliação Pessoal":
 
     # ---------- ESTILO VISUAL ----------
-    st.set_page_config(page_title="Preditor de Obesidade", layout="centered")
+    st.set_page_config(page_title="Preditor de Obesidade", layout="wide")
     st.markdown("""
     <style>
     body {
